@@ -2,7 +2,7 @@
 # THIS IS THE SINGLE SOURCE OF VERSION
 # All other files (pyproject.toml, workflows, etc.) read from here
 
-__version__ = "1.0.0"
+__version__ = "1.1"
 
 APP_VERSION = f"v{__version__}"
 GITHUB_REPO = "leoallday/mov-watch"
