@@ -2,4 +2,7 @@
 *.pyc
 .env
 
+# aur
+aur/
+
 
