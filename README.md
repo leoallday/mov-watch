@@ -76,7 +76,9 @@ pip install --upgrade mov-watch
 
 ### Method 2: Arch Linux (AUR)
 
-- SOON
+```bash
+yay -S mov-watch
+```
 
 ### Method 3: From Source
 
