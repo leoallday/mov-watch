@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 from typing import Optional
 from .utils import is_bundled
-from src import api # Import api for logging
+from mov_watch import api # Import api for logging
 
 class PlayerManager:
     def __init__(self, rpc_manager=None, console=None):

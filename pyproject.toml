@@ -50,15 +50,15 @@ Issues = "https://github.com/leoallday/mov-watch/issues"
 Changelog = "https://github.com/leoallday/mov-watch/releases"
 
 [project.scripts]
-mov-watch = "src.app:main"
-mw = "src.app:main"
+mov-watch = "mov_watch.app:main"
+mw = "mov_watch.app:main"
 
 [tool.setuptools]
-packages = ["src"]
+packages = ["mov_watch"]
 include-package-data = true
 
 [tool.setuptools.dynamic]
-version = {attr = "src.version.__version__"}
+version = {attr = "mov_watch.version.__version__"}
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.txt", "*.db"]

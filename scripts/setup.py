@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 from pathlib import Path
 
 # Read the version from version.py
-version_file = Path(__file__).parent.parent / "src" / "version.py"
+version_file = Path(__file__).parent.parent / "mov_watch" / "version.py"
 version = {}
 with open(version_file) as f:
     exec(f.read(), version)
@@ -47,8 +47,8 @@ setup(
     python_requires=">=3.8",
     entry_points={
         "console_scripts": [
-            "mov-watch=src.app:main",
-            "mw=src.app:main",
+            "mov-watch=mov_watch.app:main",
+            "mw=mov_watch.app:main",
         ],
     },
     classifiers=[

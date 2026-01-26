@@ -4,7 +4,7 @@ import re
 import json
 from typing import List, Union, Optional
 from urllib.parse import urljoin
-from src.models import Movie, TVShow, Season, Episode, Media
+from mov_watch.models import Movie, TVShow, Season, Episode, Media
 
 BASE_URL = "https://flixhq.to" # Changed to flixhq.to
 

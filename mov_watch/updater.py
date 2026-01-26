@@ -105,7 +105,7 @@ def get_installation_type():
     
     try:
         file_path = Path(__file__).resolve()
-        if file_path.parent.name == 'src':
+        if file_path.parent.name == 'mov_watch':
             project_root = file_path.parent.parent
             if (project_root / 'main.py').exists():
                 return 'source'

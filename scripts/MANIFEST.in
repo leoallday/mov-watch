@@ -6,7 +6,7 @@ include requirements.txt
 include themes.py
 
 # Include version file
-include src/version.py
+include mov_watch/version.py
 
 # Include database directory structure
 recursive-include database *.json

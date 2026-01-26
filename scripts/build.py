@@ -71,7 +71,7 @@ a = Analysis(
     pathex=[str(script_dir)],
     binaries={binaries},
     datas=[
-        (str(script_dir / 'src'), 'src'),
+        (str(script_dir / 'mov_watch'), 'mov_watch'),
     ],
     hiddenimports=[
         'pypresence',
@@ -87,17 +87,17 @@ a = Analysis(
         'requests',
         'cryptography',
         'cryptography.fernet',
-        'src.version',
-        'src.updater',
-        'src.config',
-        'src.app',
-        'src.api',
-        'src.player',
-        'src.discord_rpc',
-        'src.models',
-        'src.ui',
-        'src.utils',
-        'src.history',
+        'mov_watch.version',
+        'mov_watch.updater',
+        'mov_watch.config',
+        'mov_watch.app',
+        'mov_watch.api',
+        'mov_watch.player',
+        'mov_watch.discord_rpc',
+        'mov_watch.models',
+        'mov_watch.ui',
+        'mov_watch.utils',
+        'mov_watch.history',
     ],
     hookspath=[],
     hooksconfig={{}},
@@ -131,7 +131,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(script_dir / 'assets' / 'icon.ico') if (script_dir / 'assets' / 'icon.ico').exists() else None,
+    icon=str(script_dir / 'assets' / 'movie-watch.ico') if (script_dir / 'assets' / 'movie-watch.ico').exists() else None,
 )
 '''
     
@@ -175,7 +175,7 @@ def build_executable(bundle_mpv=False):
     else:
         print("📹 MPV: User will need to install separately")
     
-    icon_path = script_dir / "assets" / "icon.ico"
+    icon_path = script_dir / "assets" / "movie-watch.ico"
     if icon_path.exists() and system == "Windows":
         print(f"🎨 Icon: {icon_path}")
     elif system == "Windows":

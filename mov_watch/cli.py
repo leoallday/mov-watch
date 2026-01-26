@@ -4,12 +4,12 @@ import subprocess
 import shutil
 import time
 import re
-from src import api
-from src.player import PlayerManager
-from src.models import Movie, TVShow
-from src.history import HistoryManager
-from src.version import APP_VERSION
-from src.config import MINIMAL_ASCII_ART, GOODBYE_ART, THEMES
+from mov_watch import api
+from mov_watch.player import PlayerManager
+from mov_watch.models import Movie, TVShow
+from mov_watch.history import HistoryManager
+from mov_watch.version import APP_VERSION
+from mov_watch.config import MINIMAL_ASCII_ART, GOODBYE_ART, THEMES
 from rich.console import Console
 from rich.text import Text
 from rich.panel import Panel
@@ -263,11 +263,11 @@ def run_simple_cli(query=None, deps=None, subtitle_language: str = "english"):
     if deps:
         cli = CliWrapper(deps['api'], deps['player'], deps['history'], deps['settings'], deps['rpc'], subtitle_language=subtitle_language)
     else:
-        from src import api
-        from src.player import PlayerManager
-        from src.history import HistoryManager
-        from src.settings import SettingsManager
-        from src.discord_rpc import DiscordRPCManager
+        from mov_watch import api
+        from mov_watch.player import PlayerManager
+        from mov_watch.history import HistoryManager
+        from mov_watch.settings import SettingsManager
+        from mov_watch.discord_rpc import DiscordRPCManager
         cli = CliWrapper(api, PlayerManager(console=Console()), HistoryManager(), SettingsManager(), DiscordRPCManager(), subtitle_language=subtitle_language)
 
     exit_code = 0
