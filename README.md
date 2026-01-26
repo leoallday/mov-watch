@@ -6,7 +6,7 @@
 
 ---
 
-Terminal-based movie and TV show streaming with Arabic subtitles
+Terminal-based movie and TV show streaming with Arabic/English subtitles
 
 <p align="center">
   <a href="https://github.com/leoallday/mov-watch/stargazers">
