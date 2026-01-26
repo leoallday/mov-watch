@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mov-watch"
+dynamic = ["version"]
+description = "Terminal-based movie and TV show streaming"
+readme = "README.md"
+license = "GPL-3.0"
+authors = [
+    {name = "leoallday"}
+]
+maintainers = [
+    {name = "leoallday"}
+]
+keywords = ["movies", "tv-shows", "streaming", "cli", "terminal"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Environment :: Console",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "rich>=13.0.0",          # Terminal UI framework
+    "requests>=2.31.0",      # HTTP client for API communication
+    "pypresence>=4.5.0",     # Discord Rich Presence integration
+    "cryptography>=41.0.0",  # Secure API authentication
+    "beautifulsoup4>=4.12.2", # For parsing HTML
+    "yt-dlp",                # Extract movie and tv show trailers from YouTube
+    "Pillow>=10.0.0",        # Image processing for movie and tv show posters
+    "numpy>=1.24.0",         # Array operations for image display
+]
+# External tools (auto-installed by deps.py):
+# - mpv: Media player for streaming episodes
+# - ffmpeg: Multimedia framework (helper for mpv)
+
+[project.urls]
+Homepage = "https://github.com/leoallday/mov-watch"
+Repository = "https://github.com/leoallday/mov-watch"
+Issues = "https://github.com/leoallday/mov-watch/issues"
+Changelog = "https://github.com/leoallday/mov-watch/releases"
+
+[project.scripts]
+mov-watch = "src.app:main"
+mw = "src.app:main"
+
+[tool.setuptools]
+packages = ["src"]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = {attr = "src.version.__version__"}
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.txt", "*.db"]

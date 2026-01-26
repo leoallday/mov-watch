@@ -1,0 +1,16 @@
+# Core dependencies
+rich>=13.0.0          # Terminal UI framework
+requests>=2.31.0      # HTTP client for API communication
+pypresence>=4.5.0     # Discord Rich Presence integration
+cryptography>=41.0.0  # Secure API authentication
+beautifulsoup4>=4.12.2 # For parsing HTML
+
+# Media processing
+yt-dlp                # Extract movie and tv show trailers from YouTube
+Pillow>=10.0.0        # Image processing for movie and tv show posters
+numpy>=1.24.0         # Array operations for image display
+
+# External tools (auto-installed by deps.py):
+# - mpv: Media player for streaming episodes
+# - ffmpeg: Multimedia framework (helper for mpv)
+# - fzf: its just fuzzy... :)

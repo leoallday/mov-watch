@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Movie Watch
+Comment=Terminal-based movie and TV show streaming
+Exec=mov-watch
+Icon=mov-watch
+Terminal=true
+Categories=Video;AudioVideo;Player;ConsoleOnly;
+Keywords=mov-watch;movie;tv;streaming;cli;
+StartupNotify=false
