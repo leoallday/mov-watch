@@ -134,20 +134,9 @@ Here's everything this tool offers:
 - **Multiple Quality Options**: Watch in 1080p, 720p, or 480p depending on your internet speed
 - **Subtitle Support**: Automatically fetches and prioritizes Arabic and English subtitles, making both available for selection in your media player.
 - **Resume from History**: Pick up exactly where you left off (buggy - acknowledged)
-- **Batch Download**: (Feature needs confirmation, ani-cli-arabic had it, mov-watch does not explicitly have it in `src/ui.py`)
-
-### Discovery & Browsing
-
-- **Search Movies & TV Shows**: Find any movie or TV show by name.
-- **Trending Now**: (Feature needs confirmation)
-- **Top Rated**: (Feature needs confirmation)
-- **Browse by Genre**: (Feature needs confirmation)
-- **Browse by Studio**: (Feature needs confirmation)
-- **Latest Releases**: (Feature needs confirmation)
 
 ### Personal Library
 
-- **Watch History**: Keep track of everything you've watched with timestamps
 - **Favorites System**: Bookmark your favorite movies and TV shows for quick access
 - **Episode Tracking**: The app remembers which episode you're on
 
@@ -165,7 +154,6 @@ Here's everything this tool offers:
 - **Automatic Updates**: Built-in version checker notifies you of new releases, and yes this can be turned off.
 - **MPV/VLC Support**: Choose your preferred media player
 - **Dependency Auto-installer**: Automatically checks and installs missing dependencies.
-- **CLI Mode**: Simple command-line mode for quick searches (`mw -i "Breaking Bad"`) _interactive mode also runs if the terminal is too narrow_
 - **Cross-platform**: Works on Windows, Linux, and macOS
 
 ---
@@ -218,12 +206,6 @@ Access the settings menu from the main screen to customize:
 - **Update Checking**: Toggle automatic update notifications
 
 You can also manually edit the config file if you prefer.
-
----
-
-## Star History
-
-<!-- Star History chart removed - replace with mov-watch specific if desired -->
 
 ---
 
