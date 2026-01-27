@@ -19,7 +19,7 @@ Terminal-based movie and TV show streaming with Arabic/English subtitles
   <a href="https://github.com/leoallday/mov-watch/releases">
     <img src="https://img.shields.io/github/v/release/leoallday/mov-watch?style=for-the-badge" />
   </a>
-  <a href="https://pypi.org/project/mov-watch">
+  <a href="https://pypi.org/project/mov-watch/">
     <img src="https://img.shields.io/pypi/v/mov-watch?style=for-the-badge" />
   </a>
 </p>
