@@ -126,12 +126,50 @@ class PlayerManager:
             stderr=subprocess.DEVNULL
         )
 
+    def _get_mpv_config_options(self) -> set[str]:
+        """Check common mpv.conf locations for defined options."""
+        options = set()
+        config_paths = []
+        
+        # Windows config path
+        if os.name == 'nt':
+            appdata = os.getenv('APPDATA')
+            if appdata:
+                config_paths.append(os.path.join(appdata, 'mpv', 'mpv.conf'))
+        else:
+            # Linux/macOS config paths
+            config_paths.append(os.path.expanduser('~/.config/mpv/mpv.conf'))
+            config_paths.append('/etc/mpv/mpv.conf')
+            config_paths.append(os.path.expanduser('~/.mpv/config')) # Legacy path
+
+        for path in config_paths:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith('#'):
+                                # Split by = or space
+                                if '=' in line:
+                                    key = line.split('=')[0].strip()
+                                else:
+                                    key = line.split()[0].strip()
+                                options.add(key)
+                except (IOError, OSError) as e:
+                    api.log_debug(f"DEBUG: Failed to read mpv config at {path}: {e}")
+        
+        return options
+
     def _play_mpv(self, url: str, title: str, subtitle_urls: Optional[list[str]] = None):
         api.log_debug(f"DEBUG: _play_mpv - Received URL for playback: {url}")
         mpv_path = self.get_mpv_path()
         
         if mpv_path != 'mpv' and not os.path.exists(mpv_path):
             raise FileNotFoundError(f"MPV not found at: {mpv_path}")
+
+        # Check for options in mpv.conf to avoid overriding them
+        config_options = self._get_mpv_config_options()
+        api.log_debug(f"DEBUG: _play_mpv - Options found in mpv.conf: {config_options}")
 
         mpv_args = [
             mpv_path,
@@ -146,9 +184,23 @@ class PlayerManager:
             '--demuxer-max-bytes=256M',
             '--demuxer-max-back-bytes=128M',
             '--cache-secs=30',
-            '--hwdec=auto-safe',
-            '--vo=gpu',
-            '--profile=gpu-hq',
+        ]
+
+        # Only add options if not already defined in mpv.conf
+        if 'hwdec' not in config_options:
+            mpv_args.append('--hwdec=auto-safe')
+        else:
+            api.log_debug("DEBUG: _play_mpv - hwdec already in mpv.conf, skipping default")
+
+        if 'vo' not in config_options:
+            mpv_args.append('--vo=gpu')
+        else:
+            api.log_debug("DEBUG: _play_mpv - vo already in mpv.conf, skipping default")
+
+        if 'profile' not in config_options:
+            mpv_args.append('--profile=gpu-hq')
+
+        mpv_args.extend([
             '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             '--sub-auto=fuzzy',
             '--sub-file-paths=subs',
@@ -156,7 +208,7 @@ class PlayerManager:
             '--alang=jpn,ja,eng,en',
             '--title=' + title,
             url
-        ]
+        ])
         
         if subtitle_urls:
             for sub_url in subtitle_urls:
