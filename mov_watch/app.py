@@ -325,12 +325,81 @@ class MovieWatchApp:
         self.rpc.update_viewing_media(title, media.poster)
 
     def handle_history(self):
-        # This needs to be adapted to the new data models and API
-        self.ui.render_message("Info", "History is not fully implemented in the TUI yet.", "info")
+        while True:
+            history_items = self.history.get_history()
+            if not history_items:
+                self.ui.render_message("History", "No watch history found.", "info")
+                return
+
+            selected_idx = self.ui.history_menu(history_items)
+            if selected_idx is None:
+                return
+
+            selected_item = history_items[selected_idx]
+            
+            # Since history only stores metadata, we need to fetch the full media object
+            results = self.ui.run_with_loading(
+                f"Loading '{selected_item['title']}'...", 
+                self.api.search, 
+                selected_item['title']
+            )
+
+            if not results:
+                 self.ui.render_message("Error", f"Could not find media '{selected_item['title']}'", "error")
+                 continue
+
+            # Find exact match if possible, otherwise use first result
+            media = results[0]
+            for res in results:
+                if res.title == selected_item['title']:
+                    media = res
+                    break
+            
+            if isinstance(media, Movie):
+                self.handle_movie_selection(media)
+            elif isinstance(media, TVShow):
+                self.handle_tvshow_selection(media)
 
     def handle_favorites(self):
-        # This needs to be adapted to the new data models and API
-        self.ui.render_message("Info", "Favorites are not fully implemented in the TUI yet.", "info")
+        while True:
+            fav_items = self.favorites.get_all()
+            if not fav_items:
+                 self.ui.render_message("Favorites", "No favorites found.", "info")
+                 return
+
+            result = self.ui.favorites_menu(fav_items)
+            if result is None:
+                return
+            
+            selected_idx, action = result
+            selected_item = fav_items[selected_idx]
+
+            if action == 'remove':
+                self.favorites.remove(selected_item['title'])
+                continue
+            
+            elif action == 'watch':
+                 # Same logic as history retrieval
+                results = self.ui.run_with_loading(
+                    f"Loading '{selected_item['title']}'...", 
+                    self.api.search, 
+                    selected_item['title']
+                )
+
+                if not results:
+                     self.ui.render_message("Error", f"Could not find media '{selected_item['title']}'", "error")
+                     continue
+
+                media = results[0]
+                for res in results:
+                    if res.title == selected_item['title']:
+                        media = res
+                        break
+                
+                if isinstance(media, Movie):
+                    self.handle_movie_selection(media)
+                elif isinstance(media, TVShow):
+                    self.handle_tvshow_selection(media)
 
     def handle_exit(self):
         self.ui.clear()
