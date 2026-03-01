@@ -49,6 +49,7 @@ Before installing, make sure you have:
 - **yt-dlp** (for video processing)
 - **aria2** (for video downloading)
 - **beautfullsoup** (for web scraping)
+- **pycryptodome** (for link decoding)
 
 > **⚠️ Important Note:** If you are using macOS, build from source.
 
@@ -84,7 +85,7 @@ yay -S mov-watch
 
 Want to run the development version?
 
-**On Windows:**
+**On Windows:** (not tested)
 
 ```powershell
 # Install MPV first (if not already installed or bundled by mov-watch)
