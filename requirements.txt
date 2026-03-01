@@ -4,7 +4,7 @@ requests>=2.31.0      # HTTP client for API communication
 pypresence>=4.5.0     # Discord Rich Presence integration
 cryptography>=41.0.0  # Secure API authentication
 beautifulsoup4>=4.12.2 # For parsing HTML
-
+pycryptodome>=3.19.0
 # Media processing
 yt-dlp                # Extract movie and tv show trailers from YouTube
 Pillow>=10.0.0        # Image processing for movie and tv show posters

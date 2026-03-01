@@ -281,6 +281,8 @@ class MovieWatchApp:
 
         self.rpc.update_watching(title, episode_title, media.poster)
         
+        # Debug: Show what media we're trying to play
+        self.api.log_debug(f"play_media called: {media.title} | URL: {media.url} | Type: {type(media).__name__}")
         
         video_url, subtitle_urls = self.ui.run_with_loading(
             "Extracting stream link...",
@@ -290,6 +292,7 @@ class MovieWatchApp:
         )
         
         if not video_url:
+            self.api.log_debug(f"get_stream_url returned None/empty. subtitle_urls was: {subtitle_urls}")
             self.ui.render_message("✗ Error", "Failed to extract stream link.", "error")
             return
         

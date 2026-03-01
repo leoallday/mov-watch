@@ -43,6 +43,7 @@ setup(
         "yt-dlp",                # Extract movie and tv show trailers from YouTube
         "Pillow>=10.0.0",        # Image processing for movie and tv show posters
         "numpy>=1.24.0",         # Array operations for image display
+        "pycryptodome>=3.19.0",   # Crypto library for API authentication
     ],
     python_requires=">=3.8",
     entry_points={

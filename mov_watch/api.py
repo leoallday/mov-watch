@@ -4,6 +4,10 @@ import re
 import json
 from typing import List, Union, Optional
 from urllib.parse import urljoin
+import sys
+import base64
+from Crypto.Cipher import AES
+from Crypto.Hash import MD5
 from mov_watch.models import Movie, TVShow, Season, Episode, Media
 
 BASE_URL = "https://flixhq.to" # Changed to flixhq.to
@@ -16,10 +20,26 @@ HEADERS = {
 DECODER_API_URL = "https://dec.eatmynerds.live"
 
 from datetime import datetime
+import os
+
+DEBUG_LOG_FILE = os.path.expanduser("~/.mov-watch/debug.log")
+DEBUG_PRINTS_STDERR = False  # Set to True to enable debug output to stderr
 
 def log_debug(message: str):
-    """Placeholder for debug logging to prevent NameError when actual logging is disabled."""
-    pass # No-op
+    """Debug logging to stderr when DEBUG mode is enabled."""
+    # Always write to debug log file
+    try:
+        os.makedirs(os.path.dirname(DEBUG_LOG_FILE), exist_ok=True)
+        with open(DEBUG_LOG_FILE, "a") as f:
+            f.write(f"[DEBUG] {message}\n")
+    except Exception as e:
+        print(f"[DEBUG ERROR] Failed to write log: {e}", file=sys.stderr)
+    
+    if DEBUG_PRINTS_STDERR:
+        print(f"[DEBUG] {message}", file=sys.stderr)
+
+# Force debug output on startup
+# print("[DEBUG] api.py loaded! DEBUG_PRINTS_STDERR =", DEBUG_PRINTS_STDERR, file=sys.stderr)
 
 def search(query: str) -> List[Union[Movie, TVShow]]:
     """
@@ -220,79 +240,152 @@ def _get_embed_link(server_id: str) -> Optional[str]:
     """
     try:
         sources_url = f"{BASE_URL}/ajax/episode/sources/{server_id}"
-        log_debug(f"Fetching embed link: {sources_url}")
+        _debug_print(f"Fetching embed link: {sources_url}")
         response = requests.get(sources_url, headers=HEADERS)
         response.raise_for_status()
-        log_debug(f"Embed link response status: {response.status_code}")
+        _debug_print(f"Embed link response status: {response.status_code}")
 
-        # Uses regex to extract link from response.text, which is JSON
-        link_match = re.search(r'"link":"([^"]*)"', response.text)
-        if link_match:
-            embed_link = link_match.group(1)
-            log_debug(f"Extracted embed link: {embed_link}")
+        # Parse JSON response properly instead of using fragile regex
+        json_data = response.json()
+        _debug_print(f"Embed link response data: {json_data}")
+        
+        if "link" in json_data:
+            embed_link = json_data["link"]
+            _debug_print(f"Extracted embed link: {embed_link}")
             return embed_link
         
-        log_debug("No 'link' found in embed link response.")
+        _debug_print("No 'link' found in embed link response.")
         return None
     except requests.exceptions.RequestException as e:
-        log_debug(f"Request failed in _get_embed_link: {e}")
+        _debug_print(f"Request failed in _get_embed_link: {e}")
+        return None
+    except ValueError as e:
+        # ValueError catches both json.JSONDecodeError and requests.exceptions.JSONDecodeError
+        _debug_print(f"JSON decode error in _get_embed_link: {e}. Response was: {response.text[:500]}")
         return None
     except Exception as e:
-        log_debug(f"Unexpected error in _get_embed_link: {e}")
+        _debug_print(f"Unexpected error in _get_embed_link: {e}")
         return None
+
+def _debug_print(message: str):
+    """Print debug messages to stderr to avoid being captured by TUI."""
+    print(f"[DEBUG] {message}", file=sys.stderr)
+
+
+def config_aes_unsalt(key: bytes, salt: bytes, key_len=32, iv_len=16):
+    key_iv = b""
+    prev = b""
+    while len(key_iv) < (key_len + iv_len):
+        prev = MD5.new(prev + key + salt).digest()
+        key_iv += prev
+    return key_iv[:key_len], key_iv[key_len : key_len + iv_len]
+
+def config_aes_decrypt(ciphertext_b64: str, key: str):
+    ciphertext = base64.b64decode(ciphertext_b64)
+    key_encoded = key.encode()
+    if ciphertext[:8] == b"Salted__":
+        salt = ciphertext[8:16]
+        ciphertext = ciphertext[16:]
+        key_encoded, iv_encoded = config_aes_unsalt(key_encoded, salt)
+    else:
+        return ""
+    cipher = AES.new(key_encoded, AES.MODE_CBC, iv_encoded)
+    decrypted = cipher.decrypt(ciphertext)
+    pad_len = decrypted[-1]
+    return decrypted[:-pad_len].decode("latin-1")
 
 def decrypt_stream_url(embed_link: str, preferred_subs_languages: list[str]) -> tuple[Optional[str], list[str]]:
     """
-    Decrypts an embed link to get the actual streamable URL using an external decoder service.
+    Decodes an embed-1 link to get the actual streamable URL locally.
     """
-    log_debug(f"Attempting to decrypt embed link: {embed_link}")
-    params = {"url": embed_link}
+    _debug_print(f"Attempting to extract stream from embed link: {embed_link}")
     
     try:
-        response = requests.get(DECODER_API_URL, params=params, headers=HEADERS)
+        response = requests.get(embed_link, headers={"User-Agent": HEADERS["User-Agent"], "Referer": BASE_URL})
         response.raise_for_status()
-        log_debug(f"Decoder API response status: {response.status_code}")
-
-        json_data = response.json()
-        log_debug(f"Decoder API response data: {json_data}")
-
-        video_link = None
-        if "sources" in json_data:
-            for source in json_data["sources"]:
-                if "file" in source and ".m3u8" in source["file"]:
-                    video_link = source["file"]
-                    log_debug(f"Found .m3u8 video link: {video_link}")
-                    break
-
-        found_subs: dict[str, str] = {}
-        if "tracks" in json_data:
-            for track in json_data["tracks"]:
-                if "file" in track and "label" in track:
-                    # Normalize label to lower case for case-insensitive matching
-                    track_label_lower = track["label"].lower()
-                    for lang_pref in preferred_subs_languages:
-                        if lang_pref in track_label_lower and lang_pref not in found_subs:
-                            found_subs[lang_pref] = track["file"]
-                            break # Only take the first match for this language preference
+        html = response.text
+        
+        token = None
+        match = re.search(r"[a-zA-Z0-9]{48}", html)
+        if match:
+            token = match.group(0)
+        if not token:
+            match = re.search(r"window\._lk_db\s*=\s*({.*?});", html)
+            if match:
+                token_parts = re.findall(r'"(.*?)"', match.group(1))
+                token = "".join(token_parts)
+                
+        base_url_match = re.match(r"https://[a-zA-Z0-9.-]+", embed_link)
+        if not base_url_match:
+            _debug_print("Could not extract domain from embed link.")
+            return None, []
+        domain = base_url_match.group(0)
+        
+        embed_id_match = re.search(r"/e-1/([^?]+)", embed_link)
+        if not embed_id_match:
+            _debug_print("Could not extract embed ID from embed link.")
+            return None, []
             
-            subs_links = [found_subs[lang] for lang in preferred_subs_languages if lang in found_subs]
-            log_debug(f"Found subtitle links: {subs_links} for preferred languages: {preferred_subs_languages}")
+        embed_id = embed_id_match.group(1)
+        sources_url = f"{domain}/embed-1/v3/e-1/getSources?id={embed_id}"
+        if token:
+            sources_url += f"&_k={token}"
+            
+        s_res = requests.get(sources_url, headers={
+            "User-Agent": HEADERS["User-Agent"],
+            "Referer": embed_link,
+            "X-Requested-With": "XMLHttpRequest"
+        })
+        s_res.raise_for_status()
+        data = s_res.json()
+        
+        sources = None
+        if data.get("encrypted") or isinstance(data.get("sources"), str):
+            sources_encrypted = data["sources"]
+            keys_urls = ["https://keys.hs.vc/", "https://key.hi-anime.site/"]
+            aes_keys = []
+            for u in keys_urls:
+                try:
+                    k_res = requests.get(u)
+                    if k_res.status_code == 200:
+                        kd = k_res.json()
+                        if "rabbitstream" in kd and kd["rabbitstream"].get("success"):
+                            aes_keys.append(kd["rabbitstream"]["key"])
+                        elif "rabbit" in kd:
+                            aes_keys.append(kd["rabbit"])
+                except Exception as e:
+                    _debug_print(f"Failed to fetch key from {u}: {e}")
+            for key in aes_keys:
+                try:
+                    dec = config_aes_decrypt(sources_encrypted, key)
+                    sources = json.loads(dec)
+                    break
+                except Exception:
+                    pass
         else:
-            subs_links = []
-
-        if not video_link:
-            log_debug("No .m3u8 video link found in decoder API response.")
-
+            sources = data.get("sources", [])
+            
+        video_link = None
+        if sources and isinstance(sources, list):
+            video_link = sources[0].get("file")
+            
+        subs_links = []
+        found_subs: dict[str, str] = {}
+        tracks = data.get("tracks", [])
+        for track in tracks:
+            file_url = track.get("file")
+            label = track.get("label", "").lower()
+            if file_url and label:
+                for lang_pref in preferred_subs_languages:
+                    if lang_pref in label and lang_pref not in found_subs:
+                        found_subs[lang_pref] = file_url
+                        break
+        
+        subs_links = [found_subs[lang] for lang in preferred_subs_languages if lang in found_subs]
         return video_link, subs_links
-
-    except requests.exceptions.RequestException as e:
-        log_debug(f"Request failed in decrypt_stream_url: {e}")
-        return None, []
-    except json.JSONDecodeError as e:
-        log_debug(f"JSON decoding error in decrypt_stream_url: {e}. Response was: {response.text}")
-        return None, []
+        
     except Exception as e:
-        log_debug(f"Unexpected error in decrypt_stream_url: {e}")
+        _debug_print(f"Unexpected error in decrypt_stream_url: {e}")
         return None, []
 
 def get_stream_url(media: Media, subs_language: str = "english") -> tuple[Optional[str], list[str]]:
