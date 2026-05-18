@@ -93,6 +93,29 @@ def get_episodes(tv_show: TVShow) -> TVShow:
     return tv_show
 
 
+def _ensure_playwright_browser():
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return False
+    try:
+        with sync_playwright() as p:
+            p.chromium.launch(headless=True).close()
+        return True
+    except Exception:
+        pass
+    print("\n[ mov-watch ] Downloading Chromium for stream extraction... (one-time)")
+    import subprocess, sys
+    try:
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"],
+                       check=True, timeout=300)
+        print("[ mov-watch ] Chromium installed, starting...")
+        return True
+    except Exception:
+        print("[ mov-watch ] Failed to install Chromium. Try: playwright install chromium")
+        return False
+
+
 def _resolve_stream_with_playwright(tmdb_id: int, media_type: str,
                                      season: Optional[int] = None,
                                      episode: Optional[int] = None) -> Optional[StreamInfo]:
@@ -100,6 +123,9 @@ def _resolve_stream_with_playwright(tmdb_id: int, media_type: str,
         from playwright.sync_api import sync_playwright
     except ImportError:
         log_debug("playwright not installed")
+        return None
+
+    if not _ensure_playwright_browser():
         return None
 
     pw_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
