@@ -19,7 +19,8 @@ class SettingsManager:
             "auto_next": False,
             "discord_rpc": True,
             "theme": "blue",
-            "analytics": True  # Allow users to opt-out of analytics
+            "analytics": True,
+            "api_base_url": "",
         }
         
         if not self.config_file.exists():

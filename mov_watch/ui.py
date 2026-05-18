@@ -909,7 +909,7 @@ class UIManager:
     def settings_menu(self, settings_mgr):
         options = [
             ("Default Quality", ["1080p", "720p", "480p"], "default_quality"),
-            ("Player", ["mpv", "vlc"], "player"),
+            ("Player", ["mpv", "browser", "vlc"], "player"),
             ("Auto Next Episode", [True, False], "auto_next"),
             ("Discord Rich Presence", [True, False], "discord_rpc"),
             ("Analytics", [True, False], "analytics"),

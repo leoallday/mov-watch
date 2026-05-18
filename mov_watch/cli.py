@@ -106,23 +106,35 @@ class CliWrapper:
                 return []
 
     def play_video(self, media, title):
-        video_url = None
-        subtitle_urls = []
+        stream_info = None
         with self.console.status(f"[bold blue]Fetching stream for {title}...[/bold blue]", spinner="dots"):
-            video_url, subtitle_urls = self.api.get_stream_url(media, self.subtitle_language)
+            stream_info = self.api.get_stream_url(media, self.subtitle_language)
 
-        if not video_url:
-            print("\033[1;31mCould not get video stream URL.\030m")
+        if not stream_info or not stream_info.video_url:
+            print("\033[1;31mCould not get video stream URL.\033[0m")
             return False
         
         selected_subtitle_url = None
-        if subtitle_urls:
-            selected_subtitle_url = subtitle_urls[0] # This line becomes effectively unused for player.play, but useful for debugging if needed.
+        if stream_info.subtitle_urls:
+            selected_subtitle_url = stream_info.subtitle_urls[0]
             self.api.log_debug(f"DEBUG: Selected subtitle URL: {selected_subtitle_url}")
 
-        print(f"\033[1;34mPlaying {title}...\030m")
-        self.player.play(video_url, title, subtitle_urls=subtitle_urls)
-
+        print(f"\033[1;34mPlaying {title}...\033[0m")
+        player_type = self.settings_manager.get('player', 'mpv')
+        self.player.play(
+            stream_info.video_url,
+            title,
+            player_type=player_type,
+            subtitle_urls=stream_info.subtitle_urls,
+            cookies=stream_info.cookies,
+            referer=stream_info.referer,
+        )
+        
+        # For browser player, wait for user to press enter
+        if player_type == "browser":
+            print("\033[1;36mPress Enter when done watching...\033[0m")
+            input()
+        
         self.history.mark_watched(title, title)
         self.history.save_history()
         return True

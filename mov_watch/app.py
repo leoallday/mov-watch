@@ -284,23 +284,26 @@ class MovieWatchApp:
         # Debug: Show what media we're trying to play
         self.api.log_debug(f"play_media called: {media.title} | URL: {media.url} | Type: {type(media).__name__}")
         
-        video_url, subtitle_urls = self.ui.run_with_loading(
+        stream_info = self.ui.run_with_loading(
             "Extracting stream link...",
             self.api.get_stream_url,
             media,
             self.subtitle_language
         )
         
-        if not video_url:
-            self.api.log_debug(f"get_stream_url returned None/empty. subtitle_urls was: {subtitle_urls}")
+        if not stream_info or not stream_info.video_url:
+            self.api.log_debug(f"get_stream_url returned None")
             self.ui.render_message("✗ Error", "Failed to extract stream link.", "error")
             return
         
         # Pass all found subtitle URLs to the player
-        if subtitle_urls:
-            self.api.log_debug(f"DEBUG: Found subtitle URLs (TUI): {subtitle_urls}")
+        if stream_info.subtitle_urls:
+            self.api.log_debug(f"DEBUG: Found subtitle URLs (TUI): {stream_info.subtitle_urls}")
 
         player_type = self.settings.get('player')
+        
+        # Fresh import to fix the unbound local error
+        from rich.text import Text
         
         watching_text = Text()
         watching_text.append("▶ ", style=COLOR_TITLE + " blink")
@@ -322,7 +325,21 @@ class MovieWatchApp:
         self.ui.clear()
         self.ui.console.print(Align.center(watching_panel, vertical="middle", height=self.ui.console.height))
         
-        self.player.play(video_url, f"{title} - {episode_title}", player_type=player_type, subtitle_urls=subtitle_urls)
+        self.player.play(
+            stream_info.video_url,
+            f"{title} - {episode_title}",
+            player_type=player_type,
+            subtitle_urls=stream_info.subtitle_urls,
+            cookies=stream_info.cookies,
+            referer=stream_info.referer,
+        )
+        
+        # For browser player, wait for user to press enter before returning
+        if player_type == "browser":
+            from rich.text import Text
+            self.ui.console.print(Text("\n[bold]Press Enter when done watching...[/bold]", style="bold cyan"))
+            input()
+        
         self.ui.clear()
         self.history.mark_watched(title, episode_title)
         self.rpc.update_viewing_media(title, media.poster)
