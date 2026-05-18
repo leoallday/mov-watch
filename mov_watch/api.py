@@ -6,9 +6,11 @@ import os
 from mov_watch.models import Movie, TVShow, Season, Episode, Media, StreamInfo
 
 API_BASE_URL = "https://api.xleo.nl"
+API_SECRET_KEY = "mw_sk_lK8xR2mN4vP7jH9w"
 
 HEADERS = {
     'User-Agent': 'mov-watch/1.0',
+    'X-API-Key': API_SECRET_KEY,
 }
 
 DEBUG_LOG_FILE = os.path.expanduser("~/.mov-watch/debug.log")
