@@ -98,6 +98,7 @@ def _ensure_playwright_browser():
         from playwright.sync_api import sync_playwright
     except ImportError:
         return False
+    os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
     try:
         with sync_playwright() as p:
             p.chromium.launch(headless=True).close()
@@ -128,14 +129,7 @@ def _resolve_stream_with_playwright(tmdb_id: int, media_type: str,
     if not _ensure_playwright_browser():
         return None
 
-    pw_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-    if not pw_path:
-        for candidate in ["/tmp/playwright-browsers",
-                          os.path.expanduser("~/.cache/ms-playwright")]:
-            if os.path.isdir(candidate):
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = candidate
-                pw_path = candidate
-                break
+    os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
 
     if media_type == 'movie':
         target_url = f"https://www.vidking.net/embed/movie/{tmdb_id}"
