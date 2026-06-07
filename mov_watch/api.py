@@ -119,6 +119,31 @@ def _ensure_playwright_browser():
         return False
 
 
+def _get_vixsrc_embed_url(tmdb_id: int, media_type: str,
+                           season: Optional[int] = None,
+                           episode: Optional[int] = None) -> Optional[str]:
+    try:
+        if media_type == 'movie':
+            url = f"{API_BASE_URL}/stream/movie/{tmdb_id}"
+        else:
+            url = f"{API_BASE_URL}/stream/tv/{tmdb_id}/{season}/{episode}"
+
+        log_debug(f"Fetching embed URL via API: {url}")
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        if r.status_code != 200:
+            log_debug(f"API returned {r.status_code}")
+            return None
+        data = r.json()
+        embed_url = data.get("embed_url")
+        if not embed_url:
+            log_debug("API returned no embed_url")
+            return None
+        return embed_url
+    except Exception as e:
+        log_debug(f"Embed URL fetch failed: {e}")
+        return None
+
+
 def _resolve_stream_with_playwright(tmdb_id: int, media_type: str,
                                      season: Optional[int] = None,
                                      episode: Optional[int] = None) -> Optional[StreamInfo]:
@@ -133,12 +158,12 @@ def _resolve_stream_with_playwright(tmdb_id: int, media_type: str,
 
     os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
 
-    if media_type == 'movie':
-        target_url = f"https://www.vidking.net/embed/movie/{tmdb_id}"
-    else:
-        target_url = f"https://www.vidking.net/embed/tv/{tmdb_id}?s={season}&e={episode}"
+    embed_url = _get_vixsrc_embed_url(tmdb_id, media_type, season, episode)
+    if not embed_url:
+        log_debug("Could not get vixsrc embed URL")
+        return None
 
-    log_debug(f"Resolving stream via Playwright: {target_url}")
+    log_debug(f"Resolving stream via Playwright: {embed_url}")
 
     try:
         with sync_playwright() as p:
@@ -149,31 +174,39 @@ def _resolve_stream_with_playwright(tmdb_id: int, media_type: str,
             )
             page = context.new_page()
 
-            stream_url = None
+            page.goto(embed_url, wait_until='load', timeout=30000)
+            page.wait_for_timeout(8000)
 
-            def on_response(response):
-                nonlocal stream_url
-                if '.m3u8' in response.url and stream_url is None:
-                    stream_url = response.url
+            playlist_url = page.evaluate('''
+                () => {
+                    try {
+                        const player = jwplayer();
+                        if (player) {
+                            const playlist = player.getPlaylist();
+                            if (playlist && playlist[0] && playlist[0].sources && playlist[0].sources[0]) {
+                                return playlist[0].sources[0].file;
+                            }
+                        }
+                        return null;
+                    } catch(e) {
+                        return null;
+                    }
+                }
+            ''')
 
-            page.on('response', on_response)
-
-            page.goto(target_url, wait_until='networkidle', timeout=30000)
-            page.wait_for_timeout(15000)
-
-            if not stream_url:
-                log_debug("No .m3u8 URL found via Playwright")
+            if not playlist_url:
+                log_debug("No playlist URL found from JWPlayer")
                 browser.close()
                 return None
 
             cookies = context.cookies()
             browser.close()
 
-            log_debug(f"Stream URL resolved ({len(stream_url)} chars), {len(cookies)} cookies")
+            log_debug(f"Stream URL resolved ({len(playlist_url)} chars), {len(cookies)} cookies")
             return StreamInfo(
-                video_url=stream_url,
+                video_url=playlist_url,
                 cookies=cookies,
-                referer=target_url,
+                referer=embed_url,
             )
     except Exception as e:
         log_debug(f"Playwright stream resolution failed: {e}")
