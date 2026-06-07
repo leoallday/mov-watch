@@ -124,23 +124,23 @@ def _get_vixsrc_embed_url(tmdb_id: int, media_type: str,
                            episode: Optional[int] = None) -> Optional[str]:
     try:
         if media_type == 'movie':
-            url = f"{API_BASE_URL}/stream/movie/{tmdb_id}"
+            url = f"https://vixsrc.to/api/movie/{tmdb_id}"
         else:
-            url = f"{API_BASE_URL}/stream/tv/{tmdb_id}/{season}/{episode}"
+            url = f"https://vixsrc.to/api/tv/{tmdb_id}/{season}/{episode}"
 
-        log_debug(f"Fetching embed URL via API: {url}")
-        r = requests.get(url, headers=HEADERS, timeout=15)
+        log_debug(f"Fetching vixsrc embed URL: {url}")
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
         if r.status_code != 200:
-            log_debug(f"API returned {r.status_code}")
+            log_debug(f"vixsrc API returned {r.status_code}")
             return None
         data = r.json()
-        embed_url = data.get("embed_url")
-        if not embed_url:
-            log_debug("API returned no embed_url")
+        embed_path = data.get("src")
+        if not embed_path:
+            log_debug("vixsrc API returned no src")
             return None
-        return embed_url
+        return f"https://vixsrc.to{embed_path}"
     except Exception as e:
-        log_debug(f"Embed URL fetch failed: {e}")
+        log_debug(f"vixsrc embed fetch failed: {e}")
         return None
 
 
