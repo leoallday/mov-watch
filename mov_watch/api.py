@@ -78,6 +78,7 @@ def get_episodes(tv_show: TVShow) -> TVShow:
         log_debug(f"API episodes fetch failed: {e}")
         return tv_show
 
+    tv_show.seasons.clear()
     for sd in data.get('seasons', []):
         season = Season(title=sd.get('title', f"Season {sd['season']}"))
         for ep in sd.get('episodes', []):
