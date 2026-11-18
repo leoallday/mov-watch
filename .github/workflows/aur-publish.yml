@@ -1,0 +1,111 @@
+# Publishes the stable AUR package from a GitHub release.
+#
+#   release published (stable)  ->  bump pkgver, hash the tag tarball,
+#                                   regenerate .SRCINFO, push to AUR
+#
+# aur/PKGBUILD in this repository is the source of truth: only pkgver, pkgrel
+# and sha256sums are substituted here, so edit dependencies there and never
+# bump the version by hand.
+#
+# Secret: AUR_SSH_PRIVATE_KEY (public half registered on aur.archlinux.org).
+
+name: Publish AUR (stable)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Stable release tag to publish (e.g. v2.3.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AUR_REPO: ssh://aur@aur.archlinux.org/mov-watch.git
+
+jobs:
+  aur:
+    name: Update AUR package
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Resolve version
+        id: v
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG:-$INPUT_TAG}"
+          version="${tag#v}"
+          case "$version" in
+            "" | *-*)
+              echo "::error::'$tag' is not a stable version tag"
+              exit 1
+              ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+
+      - name: Install tooling
+        run: |
+          # The image ships a stale keyring; a plain -Syu then aborts on PGP
+          # signature errors on the first run against current mirrors.
+          pacman -Sy --noconfirm archlinux-keyring
+          pacman -Syu --noconfirm --needed git openssh curl
+
+      - name: Render PKGBUILD and .SRCINFO
+        run: |
+          set -euo pipefail
+          version="${{ steps.v.outputs.version }}"
+          url="https://github.com/${{ github.repository }}/archive/refs/tags/v${version}.tar.gz"
+          sum="$(curl -fsSL --retry 3 "$url" | sha256sum | cut -d' ' -f1)"
+
+          mkdir -p /tmp/pkg && cd /tmp/pkg
+          sed -E \
+            -e "s/^pkgver=.*/pkgver=${version}/" \
+            -e "s/^pkgrel=.*/pkgrel=1/" \
+            -e "s/^sha256sums=.*/sha256sums=('${sum}')/" \
+            "$GITHUB_WORKSPACE/aur/PKGBUILD" > PKGBUILD
+          grep -E '^(pkgver|pkgrel|sha256sums)=' PKGBUILD
+
+          # makepkg refuses to run as root, so use a throwaway user.
+          useradd -m builder && chown -R builder /tmp/pkg
+          su builder -c 'cd /tmp/pkg && makepkg --printsrcinfo > .SRCINFO'
+          cat .SRCINFO
+
+      - name: Push to AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${AUR_SSH_PRIVATE_KEY:-}" ]; then
+            echo "::error::AUR_SSH_PRIVATE_KEY is not set"
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur && chmod 600 ~/.ssh/aur
+          printf 'Host aur.archlinux.org\n  User aur\n  IdentityFile ~/.ssh/aur\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+
+          git clone --quiet "$AUR_REPO" /tmp/aur
+          cp /tmp/pkg/PKGBUILD /tmp/pkg/.SRCINFO /tmp/aur/
+          cd /tmp/aur
+          git config user.name leoallday
+          git config user.email leoallday@users.noreply.github.com
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "AUR already has ${VERSION}-1, nothing to push"
+            exit 0
+          fi
+
+          git add PKGBUILD .SRCINFO
+          git commit --quiet -m "upgpkg: mov-watch ${VERSION}-1"
+          git push --quiet origin HEAD:master

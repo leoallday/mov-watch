@@ -1,0 +1,61 @@
+# Automatic beta pre-releases.
+#
+# Push a commit that changes mov_watch/version.py and this workflow publishes
+# v<version>-beta.<run_number> as a GitHub pre-release, so you can hand testers
+# a build without tagging anything by hand. Pre-releases never reach PyPI or
+# the stable AUR package.
+#
+# Escape hatches:
+#   * add [skip beta] to the commit message
+#   * commits that already carry a tag (e.g. made by "Cut release") are ignored
+#   * delete this file if you only want deliberate releases
+
+name: Beta release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mov_watch/version.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: beta-release
+  cancel-in-progress: true
+
+jobs:
+  beta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git log -1 --pretty=%B | grep -q '\[skip beta\]'; then
+            echo "skipping: commit message asks for [skip beta]"
+            exit 0
+          fi
+          if [ -n "$(git tag --points-at HEAD)" ]; then
+            echo "skipping: HEAD is already tagged ($(git tag --points-at HEAD | tr '\n' ' '))"
+            exit 0
+          fi
+          version="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' mov_watch/version.py)"
+          if [ -z "$version" ]; then
+            echo "::error::could not read __version__ from mov_watch/version.py"
+            exit 1
+          fi
+          tag="v${version}-beta.${{ github.run_number }}"
+          echo "creating pre-release $tag"
+          gh release create "$tag" \
+            --prerelease \
+            --generate-notes \
+            --target "${{ github.sha }}" \
+            --title "v${version} beta ${{ github.run_number }}"

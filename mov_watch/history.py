@@ -31,7 +31,7 @@ class HistoryManager:
         try:
             if len(self.history) > self.MAX_HISTORY_SIZE:
                 sorted_items = sorted(
-                    self.history.items(),
+                    ((k, v) for k, v in self.history.items() if isinstance(v, dict)),
                     key=lambda x: x[1].get('last_updated', ''),
                     reverse=True
                 )
@@ -59,6 +59,8 @@ class HistoryManager:
     def get_history(self):
         items = []
         for media_title, data in self.history.items():
+            if not isinstance(data, dict):
+                continue
             items.append({
                 'title': media_title,
                 'episode': data.get('episode', '?'),

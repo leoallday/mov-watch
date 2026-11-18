@@ -1,10 +1,9 @@
 import os
 import sys
-import time
 import shutil
 import subprocess
 import tempfile
-from typing import Optional
+from typing import List, Optional
 from .utils import is_bundled
 from mov_watch import api
 
@@ -51,13 +50,13 @@ class PlayerManager:
                 pass
 
     def play(self, url: str, title: str, player_type: str = 'mpv',
-             subtitle_urls: Optional[list[str]] = None,
-             cookies: Optional[list[dict]] = None,
+             subtitle_urls: Optional[List[str]] = None,
+             cookies: Optional[List[dict]] = None,
              referer: Optional[str] = None):
         api.log_debug(f"DEBUG: PlayerManager.play - Received URL: {url}, player: {player_type}")
         try:
             if player_type == 'vlc':
-                self._play_vlc(url, title)
+                self._play_vlc(url, title, subtitle_urls, referer)
             elif player_type == 'browser':
                 self._play_browser(url, title)
             else:
@@ -79,7 +78,9 @@ class PlayerManager:
                 print(f"Error launching player: {str(e)}", file=sys.stderr)
                 input("Press Enter to continue...")
 
-    def _play_vlc(self, url: str, title: str):
+    def _play_vlc(self, url: str, title: str,
+                  subtitle_urls: Optional[List[str]] = None,
+                  referer: Optional[str] = None):
         vlc_path = shutil.which('vlc')
         if not vlc_path:
             if os.name == 'nt':
@@ -102,10 +103,12 @@ class PlayerManager:
                         break
         if not vlc_path:
             raise FileNotFoundError("VLC not found")
-        vlc_args = [
-            vlc_path, '--fullscreen', '--play-and-exit',
-            '--meta-title', title, url
-        ]
+        vlc_args = [vlc_path, '--fullscreen', '--play-and-exit', '--meta-title', title]
+        if referer:
+            vlc_args.append(f'--http-referrer={referer}')
+        for sub_url in subtitle_urls or []:
+            vlc_args.append(f'--sub-file={sub_url}')
+        vlc_args.append(url)
         subprocess.run(vlc_args, check=False,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -128,21 +131,21 @@ class PlayerManager:
                 if os.path.exists(p):
                     browsers.append(p)
         import webbrowser
-        browser = None
-        if browsers:
-            for b in browsers:
-                try:
-                    if os.name == 'nt':
-                        browser = subprocess.Popen([b, url])
-                    else:
-                        subprocess.Popen([b, url],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                            start_new_session=True)
-                    api.log_debug(f"DEBUG: Opened in browser: {b}")
-                    break
-                except Exception as e:
-                    api.log_debug(f"DEBUG: Failed to open in {b}: {e}")
-        if browser is None and not browsers:
+        opened = False
+        for b in browsers:
+            try:
+                if os.name == 'nt':
+                    subprocess.Popen([b, url])
+                else:
+                    subprocess.Popen([b, url],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        start_new_session=True)
+                api.log_debug(f"DEBUG: Opened in browser: {b}")
+                opened = True
+                break
+            except Exception as e:
+                api.log_debug(f"DEBUG: Failed to open in {b}: {e}")
+        if not opened:
             webbrowser.open(url)
             api.log_debug(f"DEBUG: Opened in default browser")
 
@@ -173,7 +176,7 @@ class PlayerManager:
                     api.log_debug(f"DEBUG: Failed to read mpv config at {path}: {e}")
         return options
 
-    def _write_cookies_file(self, cookies: list[dict]) -> Optional[str]:
+    def _write_cookies_file(self, cookies: List[dict]) -> Optional[str]:
         if not cookies:
             return None
         try:
@@ -198,8 +201,8 @@ class PlayerManager:
             return None
 
     def _play_mpv(self, url: str, title: str,
-                  subtitle_urls: Optional[list[str]] = None,
-                  cookies: Optional[list[dict]] = None,
+                  subtitle_urls: Optional[List[str]] = None,
+                  cookies: Optional[List[dict]] = None,
                   referer: Optional[str] = None):
         api.log_debug(f"DEBUG: _play_mpv - Received URL for playback: {url}")
         mpv_path = self.get_mpv_path()
@@ -263,7 +266,7 @@ class PlayerManager:
 
         result = subprocess.run(
             mpv_args,
-            check=True,
+            check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL
@@ -279,7 +282,16 @@ class PlayerManager:
         api.log_debug(f"DEBUG: _play_mpv - MPV stderr: {result.stderr.decode(errors='ignore')}")
 
         if result.returncode != 0:
+            stderr_tail = "\n".join(
+                result.stderr.decode(errors='ignore').strip().splitlines()[-3:]
+            )
+            message = f"MPV exited with error code {result.returncode}"
+            if stderr_tail:
+                message += f"\n{stderr_tail}"
             if self.console:
                 from rich.text import Text
-                self.console.print(Text(f"MPV exited with error code {result.returncode}", style="bold red"))
+                self.console.print(Text(message, style="bold red"))
+                input("Press Enter to continue...")
+            else:
+                print(message, file=sys.stderr)
                 input("Press Enter to continue...")

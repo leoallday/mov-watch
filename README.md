@@ -26,7 +26,7 @@ Terminal-based movie and TV show streaming with Arabic/English subtitles
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" />
 </p>
 
 <br>
@@ -48,8 +48,12 @@ Terminal-based movie and TV show streaming with Arabic/English subtitles
 
 ```bash
 pip install mov-watch
-playwright install chromium    # one-time browser download for stream extraction
+playwright install chromium    # one-time ~170 MB browser download for stream extraction
 ```
+
+The browser is kept in `~/.mov-watch/browsers` (not `~/.cache`), so clearing
+your cache does not force another download. If it is ever missing, mov-watch
+downloads it automatically on the first play.
 
 Launch:
 
@@ -87,7 +91,7 @@ python main.py
 
 ### Streaming & Playback
 
-- **Subtitle Support**: Automatically fetches Arabic and English subtitles
+- **Subtitle Support**: Uses embedded and sidecar subtitles, preferring Arabic and English tracks
 - **Resume from History**: Pick up where you left off
 
 ### Personal Library
@@ -132,8 +136,11 @@ mw -i "The Matrix"
 | **↑ / ↓**   | Navigate through lists             |
 | **Enter**   | Select/Confirm choice              |
 | **G**       | Jump to an episode number          |
+| **F**       | Toggle favorite (episode list)     |
 | **B**       | Go back                            |
 | **Q / Esc** | Quit                               |
+
+Main menu: **S** search · **L** history · **F** favorites · **C** settings · **A** credits
 
 ---
 
@@ -142,11 +149,15 @@ mw -i "The Matrix"
 Settings stored in `~/.mov-watch/database/config.json`.
 
 Access the settings menu from the main screen to customize:
-- **Player**: MPV or VLC
-- **Auto-next Episode**: Toggle automatic continuation
+- **Player**: MPV, VLC or browser
 - **Discord Rich Presence**: Toggle Discord integration
 - **Theme**: Pick from various color schemes
-- **Analytics**: Opt-in/out of anonymous usage stats
+
+### Environment variables
+
+| Variable                 | Purpose                                                        |
+| ------------------------ | -------------------------------------------------------------- |
+| `MOV_WATCH_API_BASE_URL` | Point the metadata API at a compatible mirror (default: built-in) |
 
 ---
 
@@ -173,7 +184,6 @@ See the [LICENSE](LICENSE) file for the full legal text.
 > [!CAUTION]
 > **By using this software you understand:**
 >
-> - Anonymous usage statistics are collected (can be disabled in settings)
 > - The project is licensed under GNU General Public License v3.0
 > - We do not host any content; all streams are from third-party sources
 

@@ -1,6 +1,6 @@
 pkgbase = mov-watch
 	pkgdesc = Terminal-based movie and TV show streaming
-	pkgver = 1
+	pkgver = 2.3.2
 	pkgrel = 1
 	url = https://github.com/leoallday/mov-watch
 	arch = any
@@ -13,15 +13,16 @@ pkgbase = mov-watch
 	depends = python-rich
 	depends = python-requests
 	depends = python-pypresence
-	depends = python-cryptography
+	depends = python-playwright
 	depends = yt-dlp
 	depends = python-pillow
 	depends = python-numpy
 	depends = mpv
+	depends = ffmpeg
 	depends = fzf
 	provides = mov-watch
 	conflicts = mov-watch
-	source = https://github.com/leoallday/mov-watch/archive/refs/tags/v1.tar.gz
-	sha256sums = ${SHA256}
+	source = https://github.com/leoallday/mov-watch/archive/refs/tags/v2.3.2.tar.gz
+	sha256sums = SKIP
 
 pkgname = mov-watch

@@ -1,6 +1,22 @@
 # cache
 *.pyc
+__pycache__/
+*.py[cod]
 .env
+
+# build artifacts
+build/
+dist/
+*.egg-info/
+*.spec
+
+# virtualenv / local tooling
+.venv/
+venv/
+.pytest_cache/
+
+# downloaded media
+downloads/
 
 # aur
 aur/

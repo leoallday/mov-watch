@@ -124,8 +124,7 @@ class UIManager:
         is_loading_more = False
         has_more = True
         loading_dots = 0
-        details_cache = {}
-        results_lock = threading.Lock()  # Cache for media details to avoid regeneration
+        results_lock = threading.Lock()
         
         screen_height = self.console.height
         target_height = min(screen_height, 35)
@@ -555,7 +554,7 @@ class UIManager:
 
         def generate_renderable():
             content_layout["header"].update(Panel(Text(media_title, justify="center", style="title"), box=HEAVY, border_style=COLOR_BORDER))
-            content_layout["footer"].update(Panel(Text("↑↓ Navigate | ENTER Select | g Jump | F Fav | M Batch | b Back", justify="center", style="secondary"), box=HEAVY, border_style=COLOR_BORDER))
+            content_layout["footer"].update(Panel(Text("↑↓ Navigate | ENTER Select | g Jump | F Fav | b Back", justify="center", style="secondary"), box=HEAVY, border_style=COLOR_BORDER))
             
             max_display = target_height - 3 - 3 - 2
             left_content = Text()
@@ -652,10 +651,6 @@ class UIManager:
                         return selected
                     elif key == 'f' or key == 'F':
                         return 'toggle_fav'
-                    elif key == 'm' or key == 'M':
-                        return 'batch_mode'
-                    elif key == 't' or key == 'T':
-                        return 'trailer'
                     elif key == 'g':
                         live.stop()
                         try:
@@ -677,12 +672,15 @@ class UIManager:
                             ep_input = Prompt.ask(f"{padding}{prompt_string}", console=self.console)
                             
                             try:
-                                ep_num_float = float(ep_input)
+                                target_num = int(float(ep_input))
                                 target_idx = -1
                                 for idx, ep in enumerate(episodes):
-                                    if float(ep.display_num) == ep_num_float:
-                                        target_idx = idx
-                                        break
+                                    try:
+                                        if ep.episode_number is not None and int(ep.episode_number) == target_num:
+                                            target_idx = idx
+                                            break
+                                    except (TypeError, ValueError):
+                                        continue
                                 
                                 if target_idx != -1:
                                     selected = target_idx
@@ -907,12 +905,10 @@ class UIManager:
                     # No sleep needed - get_key() already has built-in timeout
 
     def settings_menu(self, settings_mgr):
+        # Only settings that actually change behaviour are listed here.
         options = [
-            ("Default Quality", ["1080p", "720p", "480p"], "default_quality"),
             ("Player", ["mpv", "browser", "vlc"], "player"),
-            ("Auto Next Episode", [True, False], "auto_next"),
             ("Discord Rich Presence", [True, False], "discord_rpc"),
-            ("Analytics", [True, False], "analytics"),
             ("Theme", ["blue", "red", "green", "purple", "cyan", "yellow", "pink", "orange", "teal", "magenta", "lime", "coral", "lavender", "gold", "mint", "rose", "sunset"], "theme")
         ]
         selected = 0

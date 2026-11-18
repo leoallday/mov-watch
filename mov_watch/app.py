@@ -10,15 +10,13 @@ from rich.box import HEAVY
 from .config import COLOR_PROMPT, COLOR_BORDER, COLOR_TITLE
 from .ui import UIManager
 from . import api
-from .monitoring import monitor
 from .player import PlayerManager
 from .discord_rpc import DiscordRPCManager
 from .models import Movie, TVShow
-from .utils import download_file, flush_stdin
+from .utils import flush_stdin
 from .history import HistoryManager
 from .settings import SettingsManager
 from .favorites import FavoritesManager
-from .updater import check_for_updates, get_version_status
 from .deps import ensure_dependencies
 from .cli import run_simple_cli
 from .config import GOODBYE_ART
@@ -37,6 +35,7 @@ class MovieWatchApp:
         self.version_info = None
         self.current_mode = "tui"
         self.force_cli = False
+        self._cleaned_up = False
 
     def run(self):
         parser = argparse.ArgumentParser(
@@ -73,8 +72,6 @@ class MovieWatchApp:
             def connect_rpc():
                 rpc_connected['status'] = self.rpc.connect()
             threading.Thread(target=connect_rpc, daemon=True).start()
-        
-        threading.Thread(target=lambda: monitor.track_app_start(), daemon=True).start()
         
         self.rpc_status = rpc_connected
 
@@ -260,16 +257,20 @@ class MovieWatchApp:
                 media_details=None
             )
             
-            if ep_idx == -1:
-                sys.exit(0)
-            elif ep_idx is None:
-                self.rpc.update_browsing()
-                return True
-            elif ep_idx == 'toggle_fav':
+            # Strings come from the menu actions and must be handled before the
+            # integer index is used to look up an episode.
+            if ep_idx == 'toggle_fav':
                 if is_fav:
                     self.favorites.remove(show.title)
                 else:
                     self.favorites.add(show.title, show.poster)
+                continue
+            if ep_idx == -1:
+                sys.exit(0)
+            if ep_idx is None:
+                self.rpc.update_browsing()
+                return True
+            if not isinstance(ep_idx, int):
                 continue
             
             selected_episode = season.episodes[ep_idx]
@@ -450,6 +451,10 @@ class MovieWatchApp:
         input("\nPress ENTER to exit...")
 
     def cleanup(self):
+        if self._cleaned_up:
+            return
+        self._cleaned_up = True
+
         try:
             self.rpc.disconnect()
         except Exception:

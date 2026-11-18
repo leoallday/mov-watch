@@ -11,6 +11,7 @@ import platform
 import requests
 import zipfile
 from pathlib import Path
+from typing import Optional
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, DownloadColumn, TransferSpeedColumn
 
@@ -51,7 +52,7 @@ def _prepend_to_path(dir_path: Path) -> None:
         os.environ["PATH"] = dir_str + os.pathsep + current
 
 
-def _windows_local_deps_root() -> Path | None:
+def _windows_local_deps_root() -> Optional[Path]:
     """Return the local deps folder if mpv.exe or fzf.exe is present."""
     if (DEPS_DIR / "mpv.exe").exists() or (DEPS_DIR / "fzf.exe").exists():
         return DEPS_DIR
@@ -268,7 +269,7 @@ def install_fzf_windows():
                 if item.is_dir():
                     try:
                         shutil.rmtree(item)
-                    except:
+                    except OSError:
                         pass
             return True
             

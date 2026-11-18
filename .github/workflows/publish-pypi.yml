@@ -12,6 +12,8 @@ on:
 
 jobs:
   publish:
+    # Pre-releases (v2.3.3-beta.1 and friends) are not valid PyPI versions.
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -36,6 +36,13 @@ class Episode:
         self.episode_number = episode_number
         self.tmdb_id = tmdb_id
 
+    @property
+    def display_num(self):
+        """Number shown in the episode menus (falls back to the title)."""
+        if self.episode_number is not None:
+            return self.episode_number
+        return self.title
+
 
 @dataclass
 class Season:

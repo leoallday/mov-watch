@@ -14,13 +14,9 @@ class SettingsManager:
 
     def _load_settings(self) -> dict:
         defaults = {
-            "default_quality": "1080p",
             "player": "mpv",
-            "auto_next": False,
             "discord_rpc": True,
             "theme": "blue",
-            "analytics": True,
-            "api_base_url": "",
         }
         
         if not self.config_file.exists():

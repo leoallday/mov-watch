@@ -38,12 +38,10 @@ setup(
         "rich>=13.0.0",          # Terminal UI framework
         "requests>=2.31.0",      # HTTP client for API communication
         "pypresence>=4.5.0",     # Discord Rich Presence integration
-        "cryptography>=41.0.0",  # Secure API authentication
-        "beautifulsoup4>=4.12.2", # For parsing HTML
-        "yt-dlp",                # Extract movie and tv show trailers from YouTube
+        "yt-dlp",                # External tool checked by deps.py
         "Pillow>=10.0.0",        # Image processing for movie and tv show posters
         "numpy>=1.24.0",         # Array operations for image display
-        "pycryptodome>=3.19.0",   # Crypto library for API authentication
+        "playwright",            # Browser automation for stream URL extraction
     ],
     python_requires=">=3.8",
     entry_points={
@@ -66,5 +64,5 @@ setup(
         "Environment :: Console",
     ],
     keywords="movies streaming cli terminal",
-    license="MIT",
+    license="GPL-3.0",
 )

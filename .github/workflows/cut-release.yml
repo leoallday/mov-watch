@@ -1,0 +1,80 @@
+# Cuts a release: bump version.py, tag, publish, then start PyPI + AUR.
+#
+# Actions -> "Cut release" -> Run workflow
+#   2.3.3        -> stable: PyPI and the stable AUR package
+#   2.3.3-beta.1 -> pre-release: nothing else runs
+#
+# The trailing dispatch is needed because GitHub does not start workflows from
+# events created with the default GITHUB_TOKEN.
+
+name: Cut release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without the leading v (2.3.3, or 2.3.3-beta.1 for a pre-release)"
+        required: true
+        type: string
+      prerelease:
+        description: "Pre-release: skip PyPI and the stable AUR package"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version.py, commit, tag and push
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::'$VERSION' is not a version like 2.3.3 or 2.3.3-beta.1"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::tag v$VERSION already exists"
+            exit 1
+          fi
+
+          sed -i -E "s/^__version__ = \".*\"/__version__ = \"${VERSION}\"/" mov_watch/version.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Bump to v${VERSION}" || echo "version.py already at ${VERSION}"
+          git tag -a "v${VERSION}" -m "mov-watch v${VERSION}"
+          # Commit and tag in one push so the beta workflow sees the tag.
+          git push origin "HEAD:${{ github.ref_name }}" --follow-tags
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          args=(--title "v${VERSION}" --generate-notes)
+          if [ "$PRERELEASE" = "true" ]; then
+            args+=(--prerelease)
+          fi
+          gh release create "v${VERSION}" "${args[@]}"
+
+      - name: Start PyPI and AUR workflows
+        if: inputs.prerelease == false
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          gh workflow run publish-pypi.yml -f version="$VERSION"
+          gh workflow run aur-publish.yml -f tag="v$VERSION"

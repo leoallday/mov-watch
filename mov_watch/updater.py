@@ -3,8 +3,6 @@ import os
 import re
 import platform
 import subprocess
-import tempfile
-import time
 import requests
 from pathlib import Path
 
@@ -164,12 +162,8 @@ def check_pip_update():
                     print()
                     input("Press Enter to restart...")
                     
-                    # Restart using the entry point command
-                    # Determine which command was used to launch
-                    if 'mov-watch' in str(sys.argv[0]).lower():
-                        cmd = 'mov-watch'
-                    else:
-                        cmd = 'mov-watch'
+                    # Restart through the installed entry point
+                    cmd = 'mov-watch'
                     
                     # Restart application
                     if platform.system() == 'Windows':

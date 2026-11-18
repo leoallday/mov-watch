@@ -2,8 +2,6 @@ import os
 import sys
 import subprocess
 import shutil
-import time
-import re
 from mov_watch import api
 from mov_watch.player import PlayerManager
 from mov_watch.models import Movie, TVShow
@@ -12,8 +10,6 @@ from mov_watch.version import APP_VERSION
 from mov_watch.config import MINIMAL_ASCII_ART, GOODBYE_ART, THEMES
 from rich.console import Console
 from rich.text import Text
-from rich.panel import Panel
-from rich.align import Align
 
 class CliWrapper:
     def __init__(self, api, player, history, settings, rpc, subtitle_language: str = "english"):
@@ -105,7 +101,7 @@ class CliWrapper:
             except Exception:
                 return []
 
-    def play_video(self, media, title):
+    def play_video(self, media, title, show_title=None):
         stream_info = None
         with self.console.status(f"[bold blue]Fetching stream for {title}...[/bold blue]", spinner="dots"):
             stream_info = self.api.get_stream_url(media, self.subtitle_language)
@@ -135,7 +131,8 @@ class CliWrapper:
             print("\033[1;36mPress Enter when done watching...\033[0m")
             input()
         
-        self.history.mark_watched(title, title)
+        # Store the show name separately so "Continue Watching" can find it again.
+        self.history.mark_watched(show_title or title, title if show_title else "Movie")
         self.history.save_history()
         return True
 
@@ -210,7 +207,7 @@ class CliWrapper:
                             full_title = f"{selected_media.title} - {episode.title}"
                             if self.rpc:
                                 self.rpc.update_watching(selected_media.title, episode.title, selected_media.poster)
-                            self.play_video(episode, full_title)
+                            self.play_video(episode, full_title, show_title=selected_media.title)
                     break
                 continue
 

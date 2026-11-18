@@ -223,7 +223,7 @@ class RawTerminal:
     On Windows, this is a no-op since msvcrt handles input differently.
     """
     _active_instance = None
-    _lock = threading.Lock() if 'threading' in dir() else None
+    _lock = threading.Lock()
     
     def __init__(self):
         self.fd = None
