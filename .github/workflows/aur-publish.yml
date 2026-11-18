@@ -51,7 +51,7 @@ jobs:
           esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install tooling
         run: |
@@ -91,9 +91,12 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur && chmod 600 ~/.ssh/aur
-          printf 'Host aur.archlinux.org\n  User aur\n  IdentityFile ~/.ssh/aur\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+          # Container jobs set HOME=/github/home while ssh resolves ~/.ssh from
+          # the passwd entry (/root), so an ssh config written here is ignored.
+          # Pass the options explicitly instead.
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > /tmp/aur_key && chmod 600 /tmp/aur_key
+          ssh-keyscan -t ed25519,rsa aur.archlinux.org >> /tmp/known_hosts 2>/dev/null || true
+          export GIT_SSH_COMMAND="ssh -i /tmp/aur_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/known_hosts"
 
           git clone --quiet "$AUR_REPO" /tmp/aur
           cp /tmp/pkg/PKGBUILD /tmp/pkg/.SRCINFO /tmp/aur/
